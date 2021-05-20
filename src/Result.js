@@ -2,8 +2,6 @@ import React, { Component } from 'react'
 
 export default class Result extends Component {
     render() {
-        console.log(this.props.snippet)
-
         return (
             <div className="resultCard">
                 <h1>{this.props.title}</h1>
