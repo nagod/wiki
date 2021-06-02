@@ -14,6 +14,7 @@ export default class SearchApi{
                          title : data.query.search[key].title,
                          snippet: data.query.search[key].snippet,
                          pageId : data.query.search[key].pageid,
+                         url :null
                      }
                      resultData.push(resultObj)
                  }
@@ -23,35 +24,27 @@ export default class SearchApi{
     }
 
     static async mapPageURl(searchObjects){
-        return new Promise((resolve, reject) =>{
-            searchObjects.forEach((element)=>{
-                let urlForPageLink = `https://de.wikipedia.org/w/api.php?origin=*&action=query&prop=info&pageids=${element.pageId}&inprop=url&format=json`;
-                fetch(urlForPageLink)
-                .then(res => res.json())
-                .then(data => {
-                    element.url =data.query.pages[element.pageId].fullurl
-                }).catch(err => reject(err))
-            })
-            resolve(searchObjects)
-        })        
+        // prepare all URL for given Objects
+        let urls = searchObjects.map(element =>`https://de.wikipedia.org/w/api.php?origin=*&action=query&prop=info&pageids=${element.pageId}&inprop=url&format=json`);
+
+        let result = await Promise.all(urls.map(entry => fetch(entry)))
+        let resultJson = await Promise.all(result.map(entry => entry.json()))
+
+        resultJson.forEach(data =>{
+            const ObjectId = Object.keys(data.query.pages)
+            const pageId = data.query.pages[ObjectId].pageid
+            let obj = searchObjects.find(element => element.pageId === pageId)
+            obj.url = data.query.pages[pageId].fullurl
+        })
+        return searchObjects
     }
 
     static async search(searchText, outputLimit=10){
-        /*
-        let searchObjects = await this.getSearchObjects(searchText)
-        let searchObjectmapped = await this.mapPageURl(searchObjects)
+        // Obj. without vaild url
+        const rawSearchObjs = await this.getSearchObjects(searchText);
+        const  finalSearchObjs =  await this.mapPageURl(rawSearchObjs)
         
-        return searchObjectmapped
-        */
-       
-
-        return new Promise((resolve, reject) =>{
-            this.getSearchObjects(searchText).then(data=>{
-                this.mapPageURl(data).then(res =>{
-                    resolve(res)
-                }).catch(err => reject(err))
-            }).catch(err => reject(err))
-        })
+        // Objs with valid url 
+        return finalSearchObjs;   
     }
-
 }
